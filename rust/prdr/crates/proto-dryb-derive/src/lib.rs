@@ -102,7 +102,7 @@ fn impl_serialize_enum(name: &syn::Ident, e: syn::DataEnum) -> proc_macro2::Toke
 
     quote! {
         impl Serialize for #name {
-            fn serialize(&self, buf: &mut [u8]) -> Result<usize, SerializeError> {
+            fn serialize(&self, buf: &mut [u8], endian: Endianness) -> Result<usize, SerializeError> {
                 if buf.len() < 1 {
                     return Err(SerializeError::BufferOverflow);
                 }
@@ -227,7 +227,7 @@ fn impl_deserialize_enum(name: &syn::Ident, e: syn::DataEnum) -> proc_macro2::To
 
     quote! {
         impl Deserialize for #name {
-            fn deserialize(buf: &[u8]) -> Result<(Self, usize), DeserializeError> {
+            fn deserialize(buf: &[u8], endian: Endianness) -> Result<(Self, usize), DeserializeError> {
                 if buf.len() < 1 {
                     return Err(DeserializeError::Invalid);
                 }
