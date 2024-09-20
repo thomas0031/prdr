@@ -3,3 +3,5 @@ members = [
     "crates/proto-dryb",
     "crates/proto-dryb-derive",
 ]
+
+resolver = "2"

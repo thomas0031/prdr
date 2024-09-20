@@ -205,3 +205,5 @@ impl Serialize for String {
         self.as_bytes().to_vec().serialize(buf, endian) // TODO remove vec allocation
     }
 }
+
+// TODO implement arrays, tuples

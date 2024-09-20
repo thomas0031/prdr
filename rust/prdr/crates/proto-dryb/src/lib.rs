@@ -1,10 +1,10 @@
-mod error;
-mod serialize;
 mod deserialize;
 mod endian;
+mod error;
+mod serialize;
 
-pub use error::{SerializeError, DeserializeError};
-pub use serialize::Serialize;
 pub use deserialize::Deserialize;
 pub use endian::Endianness;
-pub use proto_dryb_derive::{Serialize, Deserialize};
+pub use error::{DeserializeError, SerializeError};
+pub use proto_dryb_derive::{Deserialize, Serialize};
+pub use serialize::Serialize;
