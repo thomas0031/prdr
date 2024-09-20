@@ -1,14 +1,10 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
+mod error;
+mod serialize;
+mod deserialize;
+mod endian;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use error::{SerializeError, DeserializeError};
+pub use serialize::Serialize;
+pub use deserialize::Deserialize;
+pub use endian::Endianness;
+pub use proto_dryb_derive::{Serialize, Deserialize};
