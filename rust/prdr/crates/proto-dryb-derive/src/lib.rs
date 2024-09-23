@@ -2,7 +2,7 @@ extern crate proc_macro;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
-use syn::{parse_macro_input, DeriveInput, Fields, Type};
+use syn::{parse_macro_input, DeriveInput, Fields};
 
 #[proc_macro_derive(Serialize)]
 pub fn derive_serialize(input: TokenStream) -> TokenStream {
@@ -45,51 +45,48 @@ fn impl_serialize_struct(name: &syn::Ident, s: syn::DataStruct) -> proc_macro2::
 fn impl_serialize_enum(name: &syn::Ident, e: syn::DataEnum) -> proc_macro2::TokenStream {
     let variant_arms = e.variants.iter().enumerate().map(|(index, variant)| {
         let variant_name = &variant.ident;
-        let (enum_field_names, enum_fields) = match &variant.fields {
-            Fields::Named(_fields) => {
-                todo!("named")
-            }
-            Fields::Unnamed(fields) => {
-                let count = fields.unnamed.len();
-                let field_names = (0..count)
-                    .map(|i| format_ident!("a{i}"))
+        let (enum_fields, variant_pattern) = match &variant.fields {
+            Fields::Named(fields) => {
+                let field_names = fields
+                    .named
+                    .iter()
+                    .map(|i| i.ident.as_ref().unwrap())
                     .collect::<Vec<_>>();
-
-                let quote_field_names = (0..count)
-                    .map(|i| {
-                        let enum_var_name = format_ident!("a{}", i);
-                        quote! {
-                            #enum_var_name
-                        }
-                    })
-                    .collect();
 
                 let field_calculations = fields
-                    .unnamed
+                    .named
                     .iter()
-                    .zip(field_names)
-                    .map(|(field, field_name)| match &field.ty {
-                        Type::Path(tp) => {
-                            if let Some(_) = tp.path.get_ident() {
-                                return quote! {
-                                    offset += #field_name.serialize(&mut buf[offset..])?;
-                                };
-                            }
-                            todo!("no ident")
+                    .map(|field| {
+                        let field_name = &field.ident;
+                        quote! {
+                            offset += #field_name.serialize(&mut buf[offset..], endian)?;
                         }
-                        _ => todo!("unknown type"),
                     })
                     .collect::<Vec<_>>();
 
-                (quote_field_names, field_calculations)
-            }
-            Fields::Unit => (Vec::default(), Vec::default()),
-        };
+                let pattern = quote! { #name::#variant_name { #(#field_names),* } };
 
-        let variant_pattern = if enum_field_names.is_empty() {
-            quote! { #name::#variant_name }
-        } else {
-            quote! { #name::#variant_name(#(#enum_field_names,)*) }
+                (field_calculations, pattern)
+            }
+            Fields::Unnamed(fields) => {
+                let field_names: Vec<_> = (0..fields.unnamed.len())
+                    .map(|i| format_ident!("field{}", i))
+                    .collect();
+
+                let field_calculations = field_names
+                    .iter()
+                    .map(|field_name| {
+                        quote! {
+                            offset += #field_name.serialize(&mut buf[offset..], endian)?;
+                        }
+                    })
+                    .collect::<Vec<_>>();
+
+                let pattern = quote! { #name::#variant_name(#(#field_names),*) };
+
+                (field_calculations, pattern)
+            }
+            Fields::Unit => (Vec::default(), quote! { #name::#variant_name }),
         };
 
         quote! {
@@ -167,54 +164,55 @@ fn impl_deserialize_struct(name: &syn::Ident, s: syn::DataStruct) -> proc_macro2
 fn impl_deserialize_enum(name: &syn::Ident, e: syn::DataEnum) -> proc_macro2::TokenStream {
     let variant_arms = e.variants.iter().enumerate().map(|(index, variant)| {
         let variant_name = &variant.ident;
-        let (enum_field_names, enum_fields) = match &variant.fields {
-            Fields::Named(_fields) => {
-                todo!("named")
+        let (enum_fields, variant_pattern) = match &variant.fields {
+            Fields::Named(fields) => {
+                let field_names = fields.named.iter()
+                    .map(|i| i.ident.as_ref().unwrap())
+                    .collect::<Vec<_>>();
+
+                let field_calculations = fields
+                    .named
+                    .iter()
+                    .map(|field| {
+                        let field_name = &field.ident;
+                        let field_type = &field.ty;
+
+                        return quote! {
+                            let (#field_name, size) = #field_type::deserialize(&buf[offset..], endian)?;
+                            offset += size;
+                        };
+                    })
+                    .collect::<Vec<_>>();
+
+                let pattern = quote! { #name::#variant_name { #(#field_names),* } };
+
+                (field_calculations, pattern)
             }
             Fields::Unnamed(fields) => {
                 let count = fields.unnamed.len();
                 let field_names = (0..count)
-                    .map(|i| format_ident!("a{i}"))
+                    .map(|_| format_ident!("x"))
                     .collect::<Vec<_>>();
-
-                let quote_field_names = (0..count)
-                    .map(|i| {
-                        let enum_var_name = format_ident!("a{}", i);
-                        quote! {
-                            #enum_var_name
-                        }
-                    })
-                    .collect();
 
                 let field_calculations = fields
                     .unnamed
                     .iter()
-                    .zip(field_names)
-                    .map(|(field, field_name)| match &field.ty {
-                        Type::Path(tp) => {
-                            if let Some(_) = tp.path.get_ident() {
-                                return quote! {
-                                    let (#field_name, size) = #tp::deserialize(&buf[offset..])?;
-                                    offset += size;
-                                };
-                            }
-                            todo!("no ident")
-                        }
-                        _ => todo!("unknown type"),
+                    .map(|field| {
+                        let field_type = &field.ty;
+
+                        return quote! {
+                            let (x, size) = #field_type::deserialize(&buf[offset..], endian)?;
+                            offset += size;
+                        };
                     })
                     .collect::<Vec<_>>();
 
-                (quote_field_names, field_calculations)
+                let pattern = quote! { #name::#variant_name(#(#field_names),*) };
+
+                (field_calculations, pattern)
             }
-            Fields::Unit => (Vec::default(), Vec::default()),
+            Fields::Unit => (Vec::default(), quote! { #name::#variant_name }),
         };
-
-        let variant_pattern = if enum_field_names.is_empty() {
-            quote! { #name::#variant_name }
-        } else {
-            quote! { #name::#variant_name(#(#enum_field_names,)*) }
-        };
-
         let index_u8 = index as u8;
 
         quote! {
