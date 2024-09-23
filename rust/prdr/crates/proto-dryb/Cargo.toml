@@ -13,16 +13,16 @@ criterion = "0.5.1"
 
 [[example]]
 name = "primitive_serialization"
-path = "examples/primitive_serialization.rs"
 
 [[example]]
 name = "custom_struct_serialization"
-path = "examples/custom_struct_serialization.rs"
 
 [[example]]
 name = "complex_nested_serialization"
-path = "examples/complex_nested_serialization.rs"
 
 [[example]]
 name = "custom_enum_serialization"
-path = "examples/custom_enum_serialization.rs"
+
+[[bench]]
+name = "serialization_benchmarks"
+harness = false
