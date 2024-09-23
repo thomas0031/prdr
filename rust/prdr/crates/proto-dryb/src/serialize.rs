@@ -206,4 +206,15 @@ impl Serialize for String {
     }
 }
 
-// TODO implement arrays, tuples
+impl<T: Serialize, const N: usize> Serialize for [T; N] {
+    fn serialize(&self, buffer: &mut [u8], endian: Endianness) -> Result<usize, SerializeError> {
+        let mut total_size = 0;
+        for item in self.iter() {
+            let size = item.serialize(&mut buffer[total_size..], endian)?;
+            total_size += size;
+        }
+        Ok(total_size)
+    }
+}
+
+// TODO impl for tuple

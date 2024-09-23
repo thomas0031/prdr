@@ -59,6 +59,27 @@ fn test_string() {
     }
 }
 
+#[test]
+fn test_array() {
+    let arr = [1, 2, 3, 4, 5];
+    test_roundtrip(arr, Endianness::Little);
+    test_roundtrip(arr, Endianness::Big);
+}
+
+#[test]
+fn test_array_of_arrays() {
+    let arr = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+    test_roundtrip(arr, Endianness::Little);
+    test_roundtrip(arr, Endianness::Big);
+}
+
+#[test]
+fn test_empty_array() {
+    let empty_arr: [u32; 0] = [];
+    test_roundtrip(empty_arr, Endianness::Little);
+    test_roundtrip(empty_arr, Endianness::Big);
+}
+
 fn test_roundtrip<T: Serialize + Deserialize + PartialEq + std::fmt::Debug>(
     value: T,
     endian: Endianness,

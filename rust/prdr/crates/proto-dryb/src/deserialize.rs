@@ -214,3 +214,23 @@ impl Deserialize for String {
         ))
     }
 }
+
+impl<T: Deserialize, const N: usize> Deserialize for [T; N] {
+    fn deserialize(buffer: &[u8], endian: Endianness) -> Result<(Self, usize), DeserializeError> {
+        let mut result = std::mem::MaybeUninit::<[T; N]>::uninit();
+        let mut total_size = 0;
+
+        for i in 0..N {
+            let (item, size) = T::deserialize(&buffer[total_size..], endian)?;
+            // SAFETY: We're writing to the i-th element, which is within bounds.
+            unsafe {
+                result.as_mut_ptr().cast::<T>().add(i).write(item);
+            }
+            total_size += size;
+        }
+
+        // SAFETY: All elements have been initialized.
+        let result = unsafe { result.assume_init() };
+        Ok((result, total_size))
+    }
+}
