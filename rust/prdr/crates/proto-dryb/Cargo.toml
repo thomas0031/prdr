@@ -26,3 +26,7 @@ name = "custom_enum_serialization"
 [[bench]]
 name = "serialization_benchmarks"
 harness = false
+
+[[bench]]
+name = "log_serialization_benchmarks"
+harness = false
